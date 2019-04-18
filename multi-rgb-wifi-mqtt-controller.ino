@@ -48,7 +48,8 @@ CRGB leds_analog[NUM_LEDS_2];
 // Holders for received values
 CRGB color = {255, 0, 0};         // Color 
 uint8_t brightness = 130;         // 0-255
-boolean state = false;            
+boolean state = false;      
+String effect = "color";
 
 /* 
  *  WiFi
@@ -135,6 +136,7 @@ bool processJson(char* message) {
     color.r = constrain(root["color"]["r"],0,255);
     color.g = constrain(root["color"]["g"],0,255);
     color.b = constrain(root["color"]["b"],0,255);
+    effect = "color";
   }
 
   if(root.containsKey("brightness")){
@@ -145,6 +147,10 @@ bool processJson(char* message) {
   if(root.containsKey("state")){
     if(doc["state"] == "ON"){ state = true; }
     if(doc["state"] == "OFF"){ state = false; }
+  }
+
+  if(root.containsKey("effect")){
+    effect = doc["effect"].as<String>();
   }
   
   return true;
@@ -161,6 +167,7 @@ void sendState() {
   }
   
   doc["brightness"] = brightness;
+  doc["effect"] = effect;  
 
   JsonObject docColor = doc.createNestedObject("color");
   docColor["r"] = color.r;
@@ -183,7 +190,8 @@ void reconnect() {
       Serial.println("Connected with id: " + clientId );
       client.subscribe((cmnd_topic+"/#").c_str());
       Serial.println("subscribed to " + cmnd_topic+"/#" );
-      client.publish((stat_topic).c_str(), "ON", true);
+      sendState();
+      Serial.println("Send state." );
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -237,13 +245,5 @@ void loop() {
   client.loop();
 
   //Led
-  if(!state){ //Off
-    FastLED.clear();
-  }else{ //On
-    fill_solid(leds_left, NUM_LEDS_1, CRGB(color)); 
-    fill_solid(leds_right, NUM_LEDS_1, CRGB(color)); 
-    fill_solid(leds_analog, NUM_LEDS_2, CRGB(color));     
-  }
-
-  FastLED.delay(1000 / FRAMES_PER_SECOND);
+  setLeds();
 }
