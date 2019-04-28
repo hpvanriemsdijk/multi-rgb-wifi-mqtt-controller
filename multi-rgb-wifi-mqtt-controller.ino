@@ -30,16 +30,22 @@
 // Digital strips
 #define LED_TYPE_1    APA102
 #define COLOR_ORDER_1 BGR
-#define NUM_LEDS_1    10          //10 in test, 83 in production
-CRGB leds_left[NUM_LEDS_1];
-CRGB leds_right[NUM_LEDS_1];
+#define NUM_LEDS_DIGITAL    10          //10 in test, 83 in production
+CRGB leds_left[NUM_LEDS_DIGITAL];
+CRGB leds_right[NUM_LEDS_DIGITAL];
+CRGBSet leds_left_all(leds_left, NUM_LEDS_DIGITAL);
+CRGBSet leds_right_all(leds_right, NUM_LEDS_DIGITAL);
 
 // Let strip config 
 // P9813 pixels (analog stripts)
 #define LED_TYPE_2    P9813
 #define COLOR_ORDER_2 GRB
-#define NUM_LEDS_2    6
-CRGB leds_analog[NUM_LEDS_2];
+#define NUM_LEDS_ANALOG 6
+#define NUM_LEDS_WALL NUM_LEDS_ANALOG - 1
+CRGB leds_analog[NUM_LEDS_ANALOG];
+CRGBSet leds_analog_all(leds_analog, NUM_LEDS_ANALOG);
+CRGBSet leds_bar(leds_analog_all(0,0));
+CRGBSet leds_wall(leds_analog_all(1,5));
 
 // Let strip config 
 // Other
@@ -48,8 +54,10 @@ CRGB leds_analog[NUM_LEDS_2];
 // Holders for received values
 CRGB color = {255, 0, 0};         // Color 
 uint8_t brightness = 130;         // 0-255
+uint8_t brightness_mem = 130;         // 0-255
 boolean state = false;      
 String effect = "color";
+uint8_t sound = 0; //0: none, 1: low, 3: med, 4: high
 
 /* 
  *  WiFi
@@ -93,6 +101,8 @@ void setup_wifi() {
     delay(500);
     Serial.print(".");
   }
+
+  ArduinoOTA.setHostname("OTA RGB 1");
 
   randomSeed(micros());
 
@@ -151,6 +161,34 @@ bool processJson(char* message) {
 
   if(root.containsKey("effect")){
     effect = doc["effect"].as<String>();
+
+    //reset some effects 
+    if( effect == "initiation"){
+      effect_initiation( true );
+    }
+
+    if( effect == "movie"){
+        brightness_mem = brightness;
+        brightness = 50;
+    }
+
+    if( effect == "movie-pauze"){
+      brightness = brightness_mem;  
+      fill_solid( leds_left, NUM_LEDS_DIGITAL, CRGB::Black ); 
+      fill_solid( leds_right, NUM_LEDS_DIGITAL, CRGB::Black );    
+    }
+
+    if( effect == "post-movie"){
+      if( brightness_mem < 100 ){
+        brightness_mem = 100;
+      }
+      post_movie( true ); 
+    }
+
+    if( effect == "game"){
+      brightness = brightness_mem;  
+      game( true );
+    }    
   }
   
   return true;
@@ -228,9 +266,9 @@ void setup() {
   client.setCallback(callback);
   Serial.println("");
 
-  FastLED.addLeds<LED_TYPE_1,DATA_PIN_1,CLK_PIN_1,COLOR_ORDER_1>(leds_left, NUM_LEDS_1).setCorrection(TypicalLEDStrip);
-  FastLED.addLeds<LED_TYPE_1,DATA_PIN_2,CLK_PIN_2,COLOR_ORDER_1>(leds_right, NUM_LEDS_1).setCorrection(TypicalLEDStrip);
-  FastLED.addLeds<LED_TYPE_2,DATA_PIN_3,CLK_PIN_3,COLOR_ORDER_2>(leds_analog, NUM_LEDS_2).setCorrection(TypicalLEDStrip);
+  FastLED.addLeds<LED_TYPE_1,DATA_PIN_1,CLK_PIN_1,COLOR_ORDER_1>(leds_left, NUM_LEDS_DIGITAL).setCorrection(TypicalLEDStrip);
+  FastLED.addLeds<LED_TYPE_1,DATA_PIN_2,CLK_PIN_2,COLOR_ORDER_1>(leds_right, NUM_LEDS_DIGITAL).setCorrection(TypicalLEDStrip);
+  FastLED.addLeds<LED_TYPE_2,DATA_PIN_3,CLK_PIN_3,COLOR_ORDER_2>(leds_analog, NUM_LEDS_ANALOG).setCorrection(TypicalLEDStrip);
   FastLED.setBrightness(brightness);
 }
 
