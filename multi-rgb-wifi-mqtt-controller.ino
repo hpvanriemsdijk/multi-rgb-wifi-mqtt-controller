@@ -30,7 +30,7 @@
 // Digital strips
 #define LED_TYPE_1    APA102
 #define COLOR_ORDER_1 BGR
-#define NUM_LEDS_DIGITAL    10          //10 in test, 83 in production
+#define NUM_LEDS_DIGITAL    83 //10 in test, 83 in production
 CRGB leds_left[NUM_LEDS_DIGITAL];
 CRGB leds_right[NUM_LEDS_DIGITAL];
 CRGBSet leds_left_all(leds_left, NUM_LEDS_DIGITAL);
@@ -39,7 +39,7 @@ CRGBSet leds_right_all(leds_right, NUM_LEDS_DIGITAL);
 // Let strip config 
 // P9813 pixels (analog stripts)
 #define LED_TYPE_2    P9813
-#define COLOR_ORDER_2 GRB
+#define COLOR_ORDER_2 RGB
 #define NUM_LEDS_ANALOG 6
 #define NUM_LEDS_WALL NUM_LEDS_ANALOG - 1
 CRGB leds_analog[NUM_LEDS_ANALOG];
@@ -82,6 +82,8 @@ const char* mqtt_pass = myMqttPass;
 const String mqtt_base_topic = myMqttTopic;
 const String stat_topic = "stat/" + mqtt_base_topic;
 const String cmnd_topic = "cmnd/" + mqtt_base_topic;
+const String tele_topic = "tele/" + mqtt_base_topic;
+const String available_topic = tele_topic + "/LWT";
 String clientId;
 
 //OTA
@@ -100,6 +102,7 @@ void setup_wifi() {
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
+    toggle_bar();
   }
 
   ArduinoOTA.setHostname("OTA RGB 1");
@@ -199,9 +202,9 @@ void sendState() {
   StaticJsonDocument<256> doc;
 
   if(state){ 
-    doc["state"] = "ON";
+    doc["state"] = "on";
   }else{
-    doc["state"] = "OFF";
+    doc["state"] = "off";
   }
   
   doc["brightness"] = brightness;
@@ -224,10 +227,12 @@ void reconnect() {
     clientId += String(random(0xffff), HEX);
     
     // Attempt to connect
-    if (client.connect(clientId.c_str(), mqtt_uid, mqtt_pass,(stat_topic).c_str(), 0, true, "OFF")) {
+    if (client.connect(clientId.c_str(), mqtt_uid, mqtt_pass,(available_topic).c_str(), 0, true, "Offline")) {
       Serial.println("Connected with id: " + clientId );
       client.subscribe((cmnd_topic+"/#").c_str());
       Serial.println("subscribed to " + cmnd_topic+"/#" );
+
+      client.publish((available_topic).c_str(), "Online", true);
       sendState();
       Serial.println("Send state." );
     } else {
@@ -243,6 +248,11 @@ void reconnect() {
 void setup() {
   Serial.begin(115200);
   Serial.println("\r\nBooting...");
+
+  FastLED.addLeds<LED_TYPE_1,DATA_PIN_1,CLK_PIN_1,COLOR_ORDER_1>(leds_left, NUM_LEDS_DIGITAL).setCorrection(TypicalLEDStrip);
+  FastLED.addLeds<LED_TYPE_1,DATA_PIN_2,CLK_PIN_2,COLOR_ORDER_1>(leds_right, NUM_LEDS_DIGITAL).setCorrection(TypicalLEDStrip);
+  FastLED.addLeds<LED_TYPE_2,DATA_PIN_3,CLK_PIN_3,COLOR_ORDER_2>(leds_analog, NUM_LEDS_ANALOG).setCorrection(TypicalLEDStrip);
+  FastLED.setBrightness(brightness);
   
   setup_wifi();
 
@@ -265,11 +275,6 @@ void setup() {
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
   Serial.println("");
-
-  FastLED.addLeds<LED_TYPE_1,DATA_PIN_1,CLK_PIN_1,COLOR_ORDER_1>(leds_left, NUM_LEDS_DIGITAL).setCorrection(TypicalLEDStrip);
-  FastLED.addLeds<LED_TYPE_1,DATA_PIN_2,CLK_PIN_2,COLOR_ORDER_1>(leds_right, NUM_LEDS_DIGITAL).setCorrection(TypicalLEDStrip);
-  FastLED.addLeds<LED_TYPE_2,DATA_PIN_3,CLK_PIN_3,COLOR_ORDER_2>(leds_analog, NUM_LEDS_ANALOG).setCorrection(TypicalLEDStrip);
-  FastLED.setBrightness(brightness);
 }
 
 void loop() {

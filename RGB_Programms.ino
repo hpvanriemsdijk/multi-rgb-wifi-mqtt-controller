@@ -54,6 +54,8 @@ void setLeds(){
       post_movie( false );
     }else if(effect == "game"){ 
       game( false );
+    }else if(effect == "poweroff"){ 
+      poweroff();
     }else{
       //Solid Color 
       fill_solid(leds_left, NUM_LEDS_DIGITAL, CRGB(color)); 
@@ -143,6 +145,32 @@ void effect_initiation( boolean reset ){
       sendState();
       break;
   }
+}
+
+void poweroff(){
+  /* This function is blocking by design */
+  fill_solid(leds_left, NUM_LEDS_DIGITAL, CRGB:Black)); 
+  fill_solid(leds_right, NUM_LEDS_DIGITAL, CRGB:Black); 
+  leds_analog[0] = CRGB::Red;
+  FastLED.show(); 
+  delay(1000); 
+
+  for ( uint8_t i = 1; i < NUM_LEDS_WALL; i++) {
+    leds_analog[i] = CRGB::Red;
+    FastLED.show(); 
+    delay(1000); 
+  }
+
+  brightness = 200;
+  FastLED.setBrightness(200);
+
+  for ( uint8_t i = 0; i < NUM_LEDS_WALL; i++) {
+    leds_analog[i] = CRGB::White;
+    FastLED.show(); 
+    delay(1000); 
+  }
+
+  effect = "solid"
 }
 
 void post_movie( boolean reset ){
@@ -386,6 +414,24 @@ void sinelonWall() {
   fadeToBlackBy( leds_analog_all, NUM_LEDS_ANALOG, 20);
   int pos = beatsin16(13, 0, NUM_LEDS_ANALOG - 1);
   leds_wall[pos] += CHSV( gHue, 255, 192);
+}
+
+/* 
+ * Wifi connection function
+ */
+void toggle_bar(){
+  static boolean bar_on = false;
+
+  //All black
+  FastLED.clear();
+
+  //Bar red
+  if(bar_on){
+    fill_solid(leds_bar, 1, CRGB::Red); 
+  }
+
+  //toggle
+  bar_on = !bar_on;
 }
 
 /*
