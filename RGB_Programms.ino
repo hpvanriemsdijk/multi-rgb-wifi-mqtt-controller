@@ -1,12 +1,11 @@
 /*
  * Pallets
  */
- DEFINE_GRADIENT_PALETTE( Red_wave ) {
-    0, 0, 0, 0,
-    80, 0, 0, 0,
-    128, 255, 0, 0,
-    208, 0, 0, 0,
-    0, 0, 0, 0};
+DEFINE_GRADIENT_PALETTE( Red_wave ) {
+    0, 255, 0, 0,
+   55, 0, 0,  0,
+  200, 0, 0,  0,
+  255, 255, 0,  0};    
 
 DEFINE_GRADIENT_PALETTE( Red_Orange_gp ) {
     0, 206, 20, 14,
@@ -19,8 +18,10 @@ DEFINE_GRADIENT_PALETTE( Red_Orange_gp ) {
  * Patern lists
  */
 typedef void (*SimplePatternList[])();
-SimplePatternList basePatternGully =  { rainbowGully, rainbowGullyWithGlitter,  juggleGully,       sinelonGully,  confettiGully }; 
-SimplePatternList basePattersWall =   { rainbowWall,  rainbowWall,              randomWallColors,  sinelonWall,   confettiWall}; 
+SimplePatternList basePatternGully =    { rainbowGully, rainbowGullyWithGlitter,  juggleGully,        sinelonGully,   confettiGully}; 
+SimplePatternList basePattersWall =     { rainbowWall,  rainbowWall,              randomWallColors,   sinelonWall,    confettiWall}; 
+
+
 uint8_t gCurrentPatternNumber = 0; 
 uint8_t gHue = 0;
 bool newPatern = false;
@@ -35,7 +36,6 @@ void setLeds(){
     if(effect == "initiation"){
       effect_initiation( false );
     }else if(effect == "demo"){
-      ////////NOK///////////
       basePatternGully[gCurrentPatternNumber]();
       basePattersWall[gCurrentPatternNumber]();
       EVERY_N_SECONDS( 10 ) { nextPattern(); } 
@@ -56,11 +56,13 @@ void setLeds(){
       game( false );
     }else if(effect == "poweroff"){ 
       poweroff();
-    }else{
+    }else if(effect == "color"){ 
       //Solid Color 
       fill_solid(leds_left, NUM_LEDS_DIGITAL, CRGB(color)); 
       fill_solid(leds_right, NUM_LEDS_DIGITAL, CRGB(color)); 
       fill_solid(leds_analog, NUM_LEDS_ANALOG, CRGB(color));     
+    }else{
+      //Keep as is
     }
   }
 
@@ -76,7 +78,7 @@ void effect_initiation( boolean reset ){
   unsigned long currentMillis = millis();
   int sepDelay  = 2000;
   static int phase = 0;
-  String return_effect = "color";
+  String return_effect = "demo";
 
   // initiate
   if(reset){
@@ -149,28 +151,24 @@ void effect_initiation( boolean reset ){
 
 void poweroff(){
   /* This function is blocking by design */
-  fill_solid(leds_left, NUM_LEDS_DIGITAL, CRGB:Black)); 
-  fill_solid(leds_right, NUM_LEDS_DIGITAL, CRGB:Black); 
-  leds_analog[0] = CRGB::Red;
+  CRGB bar_colors[6] = {CRGB::Red, CRGB::Red, CRGB::Green, CRGB::Green, CRGB::Blue, CRGB::Blue};
+  
+  fill_gradient_RGB(leds_left, NUM_LEDS_DIGITAL, CRGB::Red, CRGB::Black);
+  fill_gradient_RGB(leds_right, NUM_LEDS_DIGITAL,CRGB::Red, CRGB::Black);
+  brightness = 200;
+  FastLED.setBrightness(brightness);
   FastLED.show(); 
+  sendState();
   delay(1000); 
 
-  for ( uint8_t i = 1; i < NUM_LEDS_WALL; i++) {
-    leds_analog[i] = CRGB::Red;
-    FastLED.show(); 
-    delay(1000); 
-  }
-
-  brightness = 200;
-  FastLED.setBrightness(200);
-
   for ( uint8_t i = 0; i < NUM_LEDS_WALL; i++) {
-    leds_analog[i] = CRGB::White;
+    leds_analog[i] = bar_colors[i];
     FastLED.show(); 
     delay(1000); 
   }
-
-  effect = "solid"
+  
+  effect = "stream";
+  sendState();
 }
 
 void post_movie( boolean reset ){
@@ -364,31 +362,25 @@ void cascadeWallToColor( CRGB bgColor ) {
 
 void randomWallColors(){
   EVERY_N_SECONDS(4) { 
-    for ( uint16_t i = 0; i < NUM_LEDS_ANALOG; i++) {
-      leds_wall[i] = CHSV(random8(0,255), random8(155,255), 255);
+    for ( int i = 0; i < NUM_LEDS_WALL; i++) {
+      leds_wall[i] = CHSV(random8(),255,255);
     }
   }
 }
 
 void confettiWall() {
-  static uint8_t pixel = 0;
-
+  const CRGB primary [] = {CRGB::Red, CRGB::Green, CRGB::Blue};
+  
   if (newPatern) {
-    pixel = 0;
     leds_wall = CRGB::Black;
-    leds_wall[pixel] += CRGB::Red;
+    leds_wall[0] += CRGB::Red;
+    newPatern = false;
   }
 
-  fadeToBlackBy( leds_wall, NUM_LEDS_WALL, 4 ); 
+  fadeToBlackBy( leds_wall, NUM_LEDS_WALL, 5 ); 
   
   EVERY_N_SECONDS( 1 ) {
-    if (pixel >= NUM_LEDS_WALL) {
-      pixel = 0;
-    } else {
-      pixel++;
-    }
-
-    leds_wall[pixel] += CRGB::Red;
+    leds_wall[random(0,4)] += primary[random(0,2)];
   }
 }
 
@@ -398,10 +390,10 @@ void rainbowWall(){
 
 void redBeatWall() {  
   //Slow beat accross all leds
-  fadeTowardColor( leds_analog, NUM_LEDS_ANALOG, CHSV( 20, 255, beatsin16(10, 100, 200)), 20);
+  fadeTowardColor( leds_wall, NUM_LEDS_WALL, CHSV( 20, 255, beatsin16(10, 100, 200)), 20);
   
-  for (byte i = 0; i < NUM_LEDS_ANALOG; i++) {
-    leds_analog[i].fadeLightBy( beatsin8(20, 0, 80) );
+  for (byte i = 0; i < NUM_LEDS_WALL; i++) {
+    leds_wall[i].fadeLightBy( beatsin8(20, 0, 80) );
   }
 }
 
@@ -411,27 +403,33 @@ void sinelonWall() {
     leds_analog_all = CRGB::Black;
   }
 
-  fadeToBlackBy( leds_analog_all, NUM_LEDS_ANALOG, 20);
-  int pos = beatsin16(13, 0, NUM_LEDS_ANALOG - 1);
+  fadeToBlackBy( leds_analog_all, NUM_LEDS_WALL, 20);
+  int pos = beatsin16(13, 0, NUM_LEDS_WALL - 1);
   leds_wall[pos] += CHSV( gHue, 255, 192);
 }
 
 /* 
  * Wifi connection function
  */
-void toggle_bar(){
-  static boolean bar_on = false;
-
-  //All black
+void toggle_gully(){
+  static boolean gully_on = false;
+  unsigned long previousMillis; 
+  unsigned long currentMillis = millis();
+  
   FastLED.clear();
 
-  //Bar red
-  if(bar_on){
-    fill_solid(leds_bar, 1, CRGB::Red); 
+  if(gully_on){
+    fill_solid(leds_left_all,  NUM_LEDS_DIGITAL, CRGB::Red); 
+    fill_solid(leds_right_all, NUM_LEDS_DIGITAL, CRGB::Red); 
   }
 
   //toggle
-  bar_on = !bar_on;
+  if(currentMillis - previousMillis > 500) {
+    previousMillis = currentMillis;   
+    gully_on = !gully_on;
+  }
+  
+  FastLED.show(); 
 }
 
 /*

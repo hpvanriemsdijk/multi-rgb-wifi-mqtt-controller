@@ -19,8 +19,8 @@
 #include <FastLED.h>      // RGB stuff
 
 //Pin assesment
-#define DATA_PIN_1   D4
-#define CLK_PIN_1    D3
+#define DATA_PIN_1   D2
+#define CLK_PIN_1    D1
 #define DATA_PIN_2   D8
 #define CLK_PIN_2    D7
 #define DATA_PIN_3   D5
@@ -102,7 +102,7 @@ void setup_wifi() {
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
-    toggle_bar();
+    toggle_gully();
   }
 
   ArduinoOTA.setHostname("OTA RGB 1");
@@ -202,9 +202,9 @@ void sendState() {
   StaticJsonDocument<256> doc;
 
   if(state){ 
-    doc["state"] = "on";
+    doc["state"] = "ON";
   }else{
-    doc["state"] = "off";
+    doc["state"] = "OFF";
   }
   
   doc["brightness"] = brightness;
