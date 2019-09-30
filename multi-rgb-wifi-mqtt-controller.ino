@@ -10,6 +10,8 @@
  * Written for the Wemos D1 mini 
  * 
  */
+#define developmentsetup false
+ 
 #include <ArduinoJson.h>  // For JSON decoding
 #include <ESP8266WiFi.h>  // For ESP8266
 #include <PubSubClient.h> // For MQTT
@@ -38,8 +40,13 @@ CRGBSet leds_right_all(leds_right, NUM_LEDS_DIGITAL);
 
 // Let strip config 
 // P9813 pixels (analog stripts)
-#define LED_TYPE_2    P9813
-#define COLOR_ORDER_2 RGB
+#if developmentsetup 
+  #define LED_TYPE_2    APA102
+  #define COLOR_ORDER_2 BGR
+#else
+  #define LED_TYPE_2    P9813
+  #define COLOR_ORDER_2 RGB
+#endif
 #define NUM_LEDS_ANALOG 6
 #define NUM_LEDS_WALL NUM_LEDS_ANALOG - 1
 CRGB leds_analog[NUM_LEDS_ANALOG];
@@ -49,14 +56,19 @@ CRGBSet leds_wall(leds_analog_all(1,5));
 
 // Let strip config 
 // Other
-#define FRAMES_PER_SECOND  120
+#if developmentsetup 
+  boolean state = true;      
+  String effect = "color";
+  CRGB color = {255, 255, 255};         // Color 
+#else
+  boolean state = false;      
+  String effect = "color";
+  CRGB color = {255, 0, 0};         // Color 
+#endif
 
-// Holders for received values
-CRGB color = {255, 0, 0};         // Color 
+#define FRAMES_PER_SECOND  120
 uint8_t brightness = 130;         // 0-255
 uint8_t brightness_mem = 130;         // 0-255
-boolean state = false;      
-String effect = "color";
 uint8_t sound = 0; //0: none, 1: low, 3: med, 4: high
 
 /* 
@@ -170,6 +182,10 @@ bool processJson(char* message) {
       effect_initiation( true );
     }
 
+    if( effect == "pre-movie"){
+      pre_movie( true );
+    }
+
     if( effect == "movie"){
         brightness_mem = brightness;
         brightness = 50;
@@ -249,9 +265,9 @@ void setup() {
   Serial.begin(115200);
   Serial.println("\r\nBooting...");
 
-  FastLED.addLeds<LED_TYPE_1,DATA_PIN_1,CLK_PIN_1,COLOR_ORDER_1>(leds_left, NUM_LEDS_DIGITAL).setCorrection(TypicalLEDStrip);
-  FastLED.addLeds<LED_TYPE_1,DATA_PIN_2,CLK_PIN_2,COLOR_ORDER_1>(leds_right, NUM_LEDS_DIGITAL).setCorrection(TypicalLEDStrip);
-  FastLED.addLeds<LED_TYPE_2,DATA_PIN_3,CLK_PIN_3,COLOR_ORDER_2>(leds_analog, NUM_LEDS_ANALOG).setCorrection(TypicalLEDStrip);
+  FastLED.addLeds<LED_TYPE_1,DATA_PIN_1,CLK_PIN_1,COLOR_ORDER_1>(leds_left, NUM_LEDS_DIGITAL);
+  FastLED.addLeds<LED_TYPE_1,DATA_PIN_2,CLK_PIN_2,COLOR_ORDER_1>(leds_right, NUM_LEDS_DIGITAL);
+  FastLED.addLeds<LED_TYPE_2,DATA_PIN_3,CLK_PIN_3,COLOR_ORDER_2>(leds_analog, NUM_LEDS_ANALOG);
   FastLED.setBrightness(brightness);
   
   setup_wifi();

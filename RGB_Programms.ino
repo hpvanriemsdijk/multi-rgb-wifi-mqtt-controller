@@ -41,7 +41,7 @@ void setLeds(){
       EVERY_N_SECONDS( 10 ) { nextPattern(); } 
     }else if(effect == "pre-movie"){
       colorConfettiGully(CRGB::OrangeRed);
-      redBeatWall();
+      pre_movie( false );
     }else if(effect == "movie"){ 
       leds_wall.fadeToBlackBy(5);
       fadeTowardColor( leds_bar, 1, CHSV(0,255,brightness), 40);
@@ -61,6 +61,14 @@ void setLeds(){
       fill_solid(leds_left, NUM_LEDS_DIGITAL, CRGB(color)); 
       fill_solid(leds_right, NUM_LEDS_DIGITAL, CRGB(color)); 
       fill_solid(leds_analog, NUM_LEDS_ANALOG, CRGB(color));     
+
+      //Collor correction between the wall strips
+      leds_wall[0] -= CRGB( 100, 20, 0); //Less red
+      leds_wall[1] -= CRGB( 20, 20, 10); //Less red
+      leds_wall[2] -= CRGB( 100, 20, 0); //Less red
+      leds_wall[3] -= CRGB( 20, 20, 10); //Less red
+      leds_wall[4] -= CRGB( 100, 20, 0); //Less red
+  
     }else{
       //Keep as is
     }
@@ -76,7 +84,7 @@ void setLeds(){
 void effect_initiation( boolean reset ){
   static unsigned long previousStep = 0;
   unsigned long currentMillis = millis();
-  int sepDelay  = 2000;
+  int sepDelay  = 1500;
   static int phase = 0;
   String return_effect = "demo";
 
@@ -161,7 +169,7 @@ void poweroff(){
   sendState();
   delay(1000); 
 
-  for ( uint8_t i = 0; i < NUM_LEDS_WALL; i++) {
+  for ( uint8_t i = 0; i <= NUM_LEDS_WALL; i++) {
     leds_analog[i] = bar_colors[i];
     FastLED.show(); 
     delay(1000); 
@@ -195,7 +203,7 @@ void post_movie( boolean reset ){
   
   if(currentMillis - previousMillis >= 8000){
     gCurrentPatternNumber = 1;
-    effect = "pre-movie";
+    effect = "demo";
     sendState();
   }  
 }
@@ -388,12 +396,53 @@ void rainbowWall(){
   fill_rainbow( leds_analog, NUM_LEDS_ANALOG, gHue, 20);
 }
 
-void redBeatWall() {  
-  //Slow beat accross all leds
-  fadeTowardColor( leds_wall, NUM_LEDS_WALL, CHSV( 20, 255, beatsin16(10, 100, 200)), 20);
+void pre_movie( boolean reset ) {  
+  static const int steps = 15;
+  static const int virtual_length = 8;
+  static int led_pos = 1;
+  static const int primary [] = {255, 85, 170};
+  static int pulse_color = 0;
   
-  for (byte i = 0; i < NUM_LEDS_WALL; i++) {
-    leds_wall[i].fadeLightBy( beatsin8(20, 0, 80) );
+  static int wall_brightness = 150;
+  static int pulse_brightness = 250;
+  static int timer_delay = 200;
+
+  if(reset){
+    wall_brightness = 150;
+    pulse_brightness = 250;
+    timer_delay = 300;
+    led_pos = 1;
+    pulse_color = 0;
+  }
+  
+  static const int wall_brightness_step = wall_brightness/steps;
+  static const int pulse_brightness_step = pulse_brightness / 30;
+  static const int timer_delay_step = timer_delay/steps;
+  
+  fadeTowardColor( leds_wall, 5, CHSV(30,255,wall_brightness), 5);
+  
+  EVERY_N_MILLISECONDS_I( thistimer, timer_delay ) {    
+    if(led_pos > virtual_length){
+      led_pos = 1;
+      
+      pulse_color++;
+      if(pulse_color > 2 ){pulse_color=0;}      
+      timer_delay = constrain(timer_delay - timer_delay_step , 0, 1000);
+      wall_brightness = constrain(wall_brightness - wall_brightness_step , 0, 255);
+      pulse_brightness = constrain(pulse_brightness - pulse_brightness_step , 0, 255);
+      thistimer.setPeriod(timer_delay);
+    }
+
+    if(led_pos <= 5 ){
+      leds_analog_all[led_pos] += CHSV(primary[pulse_color],255,pulse_brightness);
+    }
+
+    if(pulse_brightness < 1){
+      effect = "movie";
+      sendState();
+    }
+    
+    led_pos++;
   }
 }
 
