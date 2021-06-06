@@ -20,7 +20,8 @@ DEFINE_GRADIENT_PALETTE( Red_Orange_gp ) {
 typedef void (*SimplePatternList[])();
 SimplePatternList basePatternGully =    { rainbowGully, rainbowGullyWithGlitter,  juggleGully,        sinelonGully,   confettiGully}; 
 SimplePatternList basePattersWall =     { rainbowWall,  rainbowWall,              randomWallColors,   sinelonWall,    confettiWall}; 
-
+SimplePatternList rainbowPatternGully =    { rainbowGully, rainbowGullyWithGlitter, rainbowGully, rainbowGullyWithGlitter, rainbowGully }; 
+SimplePatternList rainbowPattersWall =     { rainbowWall, rainbowWall, rainbowWall, rainbowWall, rainbowWall }; 
 
 uint8_t gCurrentPatternNumber = 0; 
 uint8_t gHue = 0;
@@ -38,6 +39,10 @@ void setLeds(){
     }else if(effect == "demo"){
       basePatternGully[gCurrentPatternNumber]();
       basePattersWall[gCurrentPatternNumber]();
+      EVERY_N_SECONDS( 10 ) { nextPattern(); } 
+    }else if(effect == "rainbow"){
+      rainbowPatternGully[gCurrentPatternNumber]();
+      rainbowPattersWall[gCurrentPatternNumber]();
       EVERY_N_SECONDS( 10 ) { nextPattern(); } 
     }else if(effect == "pre-movie"){
       colorConfettiGully(CRGB::OrangeRed);
